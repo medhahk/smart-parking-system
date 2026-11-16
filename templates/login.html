@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Create account' if registration else 'Welcome back' }}{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block auth_content %}
+<div class="auth-brand"><span class="brand-mark"><span></span><span></span><span></span><span></span></span><span class="brand-copy">smart<span>park</span></span></div>
+<div class="auth-layout">
+    <section class="auth-visual">
+        <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
+        <div class="visual-copy">
+            <span class="eyebrow"><i></i> THE SMARTER WAY TO PARK</span>
+            <h1>Every space.<br>In its <em>right place.</em></h1>
+            <p>A smarter parking experience for operators, teams, and the people on the move.</p>
+        </div>
+        <div class="parking-illustration" aria-hidden="true">
+            <div class="road-line"></div>
+            <div class="parking-car"><span class="car-window"></span><span class="car-light"></span><span class="car-wheel left"></span><span class="car-wheel right"></span></div>
+            <div class="parking-tile tile-one">P <small>AVAILABLE</small></div>
+            <div class="parking-tile tile-two"><span>↗</span> SMART<br>ALLOCATION</div>
+        </div>
+        <div class="visual-footer"><span>SMART PARKING MANAGEMENT</span><span>01 — 03</span></div>
+    </section>
+    <section class="auth-panel">
+        <div class="auth-card">
+            <span class="eyebrow muted-eyebrow">{{ 'GET STARTED' if registration else 'WELCOME TO SMARTPARK' }}</span>
+            <h2>{{ 'Create your account' if registration else 'Sign in to your space.' }}</h2>
+            <p class="auth-subtitle">{{ 'Your parking, bookings, and receipts — all in one place.' if registration else 'Your smarter parking workspace is ready when you are.' }}</p>
+            <form method="post" class="auth-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                {% if registration %}
+                <label for="full_name">Full name</label>
+                <input id="full_name" name="full_name" type="text" autocomplete="name" placeholder="Your name" maxlength="120" required>
+                {% endif %}
+                <label for="username">{{ 'Choose a username' if registration else 'Username' }}</label>
+                <input id="username" name="username" type="text" autocomplete="username" placeholder="Enter your username" maxlength="80" required>
+                <label for="password">{{ 'Create a password' if registration else 'Password' }}</label>
+                <input id="password" name="password" type="password" autocomplete="{{ 'new-password' if registration else 'current-password' }}" placeholder="{{ 'At least 8 characters' if registration else 'Enter your password' }}" {% if registration %}minlength="8"{% endif %} required>
+                {% if not registration %}<div class="forgot-hint">Need an account? Ask your parking administrator.</div>{% endif %}
+                <button class="button button-primary auth-submit" type="submit">{{ 'Create customer account' if registration else 'Sign in' }} <span>→</span></button>
+            </form>
+            <div class="auth-switch">
+                {% if registration %}Already registered? <a href="{{ url_for('login') }}">Sign in</a>{% else %}New to SmartPark? <a href="{{ url_for('register') }}">Create an account</a>{% endif %}
+            </div>
+            {% if not registration %}
+            <div class="demo-access"><span class="demo-dot"></span><div><strong>Demo access</strong><small>admin · staff · aisha <span> / </span> SmartPark@123</small></div></div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+<footer class="auth-footer"><span>© {{ now().year }} SMARTPARK SYSTEMS</span><span>BUILT FOR BETTER ARRIVALS</span></footer>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% set titles = {'slots':'Parking slots', 'vehicles':'Vehicles', 'bookings':'Bookings', 'sessions':'Parking sessions', 'payments':'Payments', 'reports':'Reports & audit'} %}
+{% block title %}{{ titles[page] }}{% endblock %}
+{% block breadcrumb %}{{ titles[page] }}{% endblock %}
+{% block content %}
+<div class="page-title-row">
+    <div><span class="eyebrow muted-eyebrow">{% if page == 'reports' %}INSIGHTS & ACCOUNTABILITY{% else %}SMARTPARK OPERATIONS{% endif %}</span><h1>{{ titles[page] }}</h1><p class="page-description">
+        {% if page == 'slots' %}Manage capacity, EV charging bays, and space availability.{% elif page == 'vehicles' %}Keep vehicle profiles ready for a faster parking arrival.{% elif page == 'bookings' %}Reserve a compatible space and follow every reservation.{% elif page == 'sessions' %}Track active arrivals, completed stays, and checkout totals.{% elif page == 'payments' %}Review every payment recorded by the parking system.{% else %}Understand occupancy, revenue, and the operational audit trail.{% endif %}
+    </p></div>
+    {% if page == 'slots' %}<a href="{{ url_for('reports') }}" class="button button-light">View analytics <span>↗</span></a>{% endif %}
+</div>
+{% if page in ['slots', 'vehicles', 'bookings'] %}
+<section class="panel form-panel">
+    <div class="panel-heading"><div><span class="eyebrow muted-eyebrow">QUICK ACTION</span><h2>{% if page == 'slots' %}Add a parking space{% elif page == 'vehicles' %}Register a vehicle{% else %}Reserve a parking space{% endif %}</h2></div><span class="form-step">01 <i>/</i> 01</span></div>
+    <form method="post" class="inline-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        {% if page == 'slots' %}
+        <input type="hidden" name="action" value="add">
+        <label>Space ID<input name="slot_no" maxlength="24" placeholder="e.g. A-106" required></label>
+        <label>Floor<input name="floor_no" type="number" min="1" max="100" placeholder="1" required></label>
+        <label>Space type<select name="slot_type" required><option value="compact">Compact</option><option value="large">Large</option><option value="bike">Motorcycle</option><option value="ev">EV charging</option><option value="vip">VIP</option></select></label>
+        <label>Rate / hour<input name="hourly_rate" type="number" min=".01" step=".01" placeholder="60.00" required></label>
+        <label class="check-label"><input name="is_ev_charger" type="checkbox"> EV charger</label>
+        <button class="button button-primary form-submit" type="submit">Add space <span>→</span></button>
+        {% elif page == 'vehicles' %}
+        {% if current_user.role in ['admin', 'staff'] %}<label>Owner user ID<input name="owner_id" type="number" min="1" placeholder="Customer ID" required></label>{% endif %}
+        <label>Registration<input name="registration_no" maxlength="24" placeholder="MH 12 AB 1234" required></label>
+        <label>Make<input name="make" maxlength="80" placeholder="Manufacturer" required></label>
+        <label>Model<input name="model" maxlength="80" placeholder="Vehicle model" required></label>
+        <label>Vehicle type<select name="vehicle_type" required><option value="car">Car</option><option value="bike">Motorcycle</option><option value="truck">Truck</option><option value="ev_car">Electric car</option></select></label>
+        <button class="button button-primary form-submit" type="submit">Register vehicle <span>→</span></button>
+        {% else %}
+        <label>Vehicle<select name="vehicle_id" required>{% for vehicle in vehicles %}<option value="{{ vehicle.id }}">{{ vehicle.registration_no }} · {{ vehicle.make }} {{ vehicle.model }}</option>{% endfor %}</select></label>
+        <label>Duration (minutes)<input name="duration_minutes" type="number" min="15" max="1440" value="120" required></label>
+        <div class="allocation-note"><span class="note-icon">✳</span><span><strong>Smart allocation</strong><small>We’ll find the best available bay for your vehicle.</small></span></div>
+        <button class="button button-primary form-submit" type="submit" {% if not vehicles %}disabled{% endif %}>Find my space <span>→</span></button>
+        {% endif %}
+    </form>
+</section>
+{% endif %}
+<section class="panel table-panel">
+    <div class="panel-heading"><div><span class="eyebrow muted-eyebrow">{% if page == 'reports' %}SYSTEM ACTIVITY{% else %}PARKING RECORDS{% endif %}</span><h2>
+        {% if page == 'slots' %}Space inventory{% elif page == 'vehicles' %}Registered vehicles{% elif page == 'bookings' %}Reservation history{% elif page == 'sessions' %}Session activity{% elif page == 'payments' %}Payment history{% else %}Occupancy & audit logs{% endif %}
+    </h2></div>
+    {% if page in ['slots', 'vehicles', 'bookings', 'sessions', 'payments'] %}<span class="record-count">{{ rows|length }} RECORD{{ '' if rows|length == 1 else 'S' }}</span>{% endif %}
+    </div>
+    {% if page == 'slots' %}
+    {% if rows %}<div class="table-scroll"><table class="data-table"><thead><tr><th>SPACE ID</th><th>FLOOR</th><th>TYPE</th><th>RATE / HR</th><th>EV CHARGER</th><th>VEHICLE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>
+    {% for row in rows %}<tr><td><span class="slot-label">{{ row.slot_no }}</span></td><td>Level {{ row.floor_no }}</td><td>{{ row.slot_type|replace('_',' ')|title }}</td><td class="amount-cell">₹{{ '%.2f'|format(row.hourly_rate) }}</td><td>{{ 'Yes' if row.is_ev_charger else '—' }}</td><td>{{ row.registration_no or '—' }}</td><td><span class="badge badge-{{ row.status }}">{{ row.status|title }}</span></td><td>{% if row.status in ['available','maintenance'] %}<form method="post" class="row-action"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="maintenance"><input type="hidden" name="slot_id" value="{{ row.id }}"><button class="button button-quiet" type="submit">{{ 'Enable' if row.status == 'maintenance' else 'Set maintenance' }}</button></form>{% else %}<span class="muted-cell">In use</span>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><span class="empty-icon">▦</span><strong>No parking spaces yet</strong><p>Add your first bay with the form above.</p></div>{% endif %}
+    {% elif page == 'vehicles' %}
+    {% if rows %}<div class="table-scroll"><table class="data-table"><thead><tr><th>REGISTRATION</th><th>VEHICLE</th><th>TYPE</th><th>OWNER</th><th>EV</th><th>STATUS</th></tr></thead><tbody>
+    {% for row in rows %}<tr><td><span class="vehicle-id">{{ row.registration_no }}</span></td><td>{{ row.make }} {{ row.model }}</td><td>{{ row.vehicle_type|replace('_',' ')|title }}</td><td>{{ row.owner_name }}</td><td>{% if row.is_ev %}<span class="ev-tag">✳ ELECTRIC</span>{% else %}—{% endif %}</td><td><span class="badge badge-{{ row.status }}">{{ row.status|title }}</span></td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><span class="empty-icon">⌁</span><strong>No vehicles registered</strong><p>Add a vehicle before creating a parking booking.</p></div>{% endif %}
+    {% elif page == 'bookings' %}
+    {% if rows %}<div class="table-scroll"><table class="data-table"><thead><tr><th>REFERENCE</th><th>VEHICLE</th>{% if current_user.role != 'customer' %}<th>CUSTOMER</th>{% endif %}<th>SPACE</th><th>BOOKED FOR</th><th>EST. TOTAL</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>
+    {% for row in rows %}<tr><td><span class="booking-code">{{ row.booking_code }}</span></td><td><span class="vehicle-id">{{ row.registration_no }}</span></td>{% if current_user.role != 'customer' %}<td>{{ row.customer }}</td>{% endif %}<td>{{ row.slot_no or row.slot_type|title }}</td><td>{{ row.start_time.strftime('%d %b, %H:%M') if row.start_time else '—' }}</td><td class="amount-cell">₹{{ '%.2f'|format(row.amount_due) }}</td><td><span class="badge badge-{{ row.status }}">{{ row.status|title }}</span></td><td><div class="action-group">
+    {% if current_user.role in ['admin','staff'] and row.status == 'active' and not row.can_check_in %}<form method="post" action="{{ url_for('check_in', booking_id=row.id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-green" type="submit">Check in</button></form>{% endif %}
+    {% if row.status == 'active' %}<form method="post" action="{{ url_for('cancel_booking', booking_id=row.id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><button class="button button-quiet button-red" type="submit" data-confirm="Cancel this booking and release its space?">Cancel</button></form>{% else %}<span class="muted-cell">—</span>{% endif %}
+    </div></td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><span class="empty-icon">▤</span><strong>No bookings to show</strong><p>{% if vehicles %}Use the form above to reserve a compatible parking space.{% else %}Register a vehicle to get started with a booking.{% endif %}</p></div>{% endif %}
+    {% elif page == 'sessions' %}
+    {% if rows %}<div class="table-scroll"><table class="data-table"><thead><tr><th>SESSION</th><th>VEHICLE</th><th>SPACE</th><th>CHECK-IN</th><th>DURATION</th><th>CHARGE</th><th>STATUS</th><th>PAYMENT</th>{% if current_user.role in ['admin','staff'] %}<th>ACTION</th>{% endif %}</tr></thead><tbody>
+    {% for row in rows %}<tr><td>#{{ '%04d'|format(row.id) }}</td><td><span class="vehicle-id">{{ row.registration_no }}</span></td><td><span class="slot-label">{{ row.slot_no }}</span></td><td>{{ row.check_in.strftime('%d %b, %H:%M') if row.check_in else '—' }}</td><td>{{ row.duration_minutes }} min</td><td class="amount-cell">₹{{ '%.2f'|format(row.amount) }}</td><td><span class="badge badge-{{ row.status }}">{{ row.status|title }}</span></td><td><span class="badge badge-{{ row.payment_status }}">{{ row.payment_status|title }}</span></td>{% if current_user.role in ['admin','staff'] %}<td>{% if row.status == 'active' %}<form method="post" action="{{ url_for('check_out', session_id=row.id) }}" class="checkout-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><select name="payment_method" aria-label="Payment method"><option>UPI</option><option>Card</option><option>Cash</option></select><button class="button button-quiet button-green" type="submit">Check out</button></form>{% else %}<span class="muted-cell">Complete</span>{% endif %}</td>{% endif %}</tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><span class="empty-icon">◷</span><strong>No sessions yet</strong><p>Checked-in vehicles will appear here.</p></div>{% endif %}
+    {% elif page == 'payments' %}
+    {% if rows %}<div class="table-scroll"><table class="data-table"><thead><tr><th>PAYMENT</th><th>VEHICLE</th><th>SESSION</th><th>BOOKING REFERENCE</th><th>METHOD</th><th>PAID AT</th><th>AMOUNT</th><th>STATUS</th></tr></thead><tbody>
+    {% for row in rows %}<tr><td>#{{ '%05d'|format(row.id) }}</td><td><span class="vehicle-id">{{ row.registration_no }}</span></td><td>#{{ row.session_id }}</td><td>{{ row.booking_code or 'Walk-in' }}</td><td>{{ row.payment_method }}</td><td>{{ row.paid_at.strftime('%d %b %Y, %H:%M') if row.paid_at else '—' }}</td><td class="amount-cell">₹{{ '%.2f'|format(row.amount) }}</td><td><span class="badge badge-{{ row.status }}">{{ row.status|title }}</span></td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><span class="empty-icon">₹</span><strong>No payments recorded</strong><p>Completed checkouts will appear in the ledger.</p></div>{% endif %}
+    {% elif page == 'reports' %}
+    <div class="report-grid">
+        <article class="report-card"><div class="panel-heading"><div><span class="eyebrow muted-eyebrow">SPACE BREAKDOWN</span><h2>Occupancy by type</h2></div></div><div class="table-scroll"><table class="data-table compact-table"><thead><tr><th>SPACE TYPE</th><th>STATUS</th><th>SPACES</th></tr></thead><tbody>{% for row in occupancy %}<tr><td>{{ row.slot_type|title }}</td><td><span class="badge badge-{{ row.status }}">{{ row.status|title }}</span></td><td class="amount-cell">{{ row.total }}</td></tr>{% else %}<tr><td colspan="3">No parking spaces configured.</td></tr>{% endfor %}</tbody></table></div></article>
+        <article class="report-card"><div class="panel-heading"><div><span class="eyebrow muted-eyebrow">DAILY COLLECTIONS</span><h2>Revenue by payment</h2></div></div><div class="table-scroll"><table class="data-table compact-table"><thead><tr><th>DATE</th><th>METHOD</th><th>COLLECTED</th></tr></thead><tbody>{% for row in revenue %}<tr><td>{{ row.day.strftime('%d %b %Y') if row.day else '—' }}</td><td>{{ row.payment_method }}</td><td class="amount-cell">₹{{ '%.2f'|format(row.total) }}</td></tr>{% else %}<tr><td colspan="3">No payment activity yet.</td></tr>{% endfor %}</tbody></table></div></article>
+    </div>
+    <div class="panel-heading audit-heading"><div><span class="eyebrow muted-eyebrow">ACCOUNTABILITY</span><h2>Recent audit events</h2></div><span class="record-count">{{ audit|length }} RECENT</span></div>
+    <div class="table-scroll"><table class="data-table"><thead><tr><th>TIME</th><th>USER</th><th>ACTION</th><th>ENTITY</th><th>DETAILS</th></tr></thead><tbody>{% for row in audit %}<tr><td>{{ row.created_at.strftime('%d %b, %H:%M') if row.created_at else '—' }}</td><td>{{ row.full_name or 'System' }}</td><td><span class="audit-action">{{ row.action|replace('_',' ')|title }}</span></td><td>{{ row.entity_type|title }}{% if row.entity_id %} #{{ row.entity_id }}{% endif %}</td><td>{{ row.details or '—' }}</td></tr>{% else %}<tr><td colspan="5" class="empty-inline">No audit activity yet.</td></tr>{% endfor %}</tbody></table></div>
+    {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}" defer></script>{% endblock %}

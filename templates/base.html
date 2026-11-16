@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101a2d">
+    <title>{% block title %}SmartPark{% endblock %} · SmartPark</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% if current_user %}
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="{{ url_for('dashboard') }}">
+            <span class="brand-mark"><span></span><span></span><span></span><span></span></span>
+            <span class="brand-copy">smart<span>park</span><small>PARKING MANAGEMENT</small></span>
+        </a>
+        <div class="sidebar-label">WORKSPACE</div>
+        <nav class="side-nav" aria-label="Main navigation">
+            <a class="{% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">⌂</span> Overview</a>
+            {% if current_user.role in ['admin', 'staff'] %}
+            <a class="{% if request.endpoint == 'slots' %}active{% endif %}" href="{{ url_for('slots') }}"><span class="nav-icon">▦</span> Parking slots</a>
+            {% endif %}
+            <a class="{% if request.endpoint == 'vehicles' %}active{% endif %}" href="{{ url_for('vehicles') }}"><span class="nav-icon">⌁</span> Vehicles</a>
+            <a class="{% if request.endpoint == 'bookings' %}active{% endif %}" href="{{ url_for('bookings') }}"><span class="nav-icon">▤</span> Bookings</a>
+            <a class="{% if request.endpoint in ['sessions_page', 'check_in', 'check_out'] %}active{% endif %}" href="{{ url_for('sessions_page') }}"><span class="nav-icon">◷</span> Parking sessions</a>
+            {% if current_user.role in ['admin', 'staff'] %}
+            <a class="{% if request.endpoint == 'payments' %}active{% endif %}" href="{{ url_for('payments') }}"><span class="nav-icon">＄</span> Payments</a>
+            <a class="{% if request.endpoint == 'reports' %}active{% endif %}" href="{{ url_for('reports') }}"><span class="nav-icon">▥</span> Reports & audit</a>
+            {% endif %}
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="help-card"><span class="help-icon">✳</span><strong>Parking, simplified.</strong><p>Smart allocation. Clear insights. Happier arrivals.</p></div>
+            <div class="profile">
+                <div class="avatar">{{ current_user.full_name[:1]|upper }}</div>
+                <div class="profile-copy"><strong>{{ current_user.full_name }}</strong><span>{{ current_user.role|title }}</span></div>
+                <form action="{{ url_for('logout') }}" method="post" class="logout-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button class="icon-button" type="submit" title="Sign out" aria-label="Sign out">↗</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="mobile-brand"><span class="brand-mark"><span></span><span></span><span></span><span></span></span> smartpark</div>
+            <div class="breadcrumb">Workspace <span>/</span> {% block breadcrumb %}Overview{% endblock %}</div>
+            <div class="topbar-right">
+                <span class="live-pill"><i></i> SYSTEM LIVE</span>
+                <span class="topbar-date">{{ now().strftime('%a, %d %b %Y') if now is defined else '' }}</span>
+                <div class="avatar avatar-small">{{ current_user.full_name[:1]|upper }}</div>
+            </div>
+        </header>
+        <section class="page-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-stack" role="status">
+                {% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}<button type="button" aria-label="Dismiss" onclick="this.parentElement.remove()">×</button></div>{% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+</div>
+{% else %}
+<main class="auth-shell">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-stack auth-flashes" role="status">
+        {% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}<button type="button" aria-label="Dismiss" onclick="this.parentElement.remove()">×</button></div>{% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% block auth_content %}{% endblock %}
+</main>
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>
